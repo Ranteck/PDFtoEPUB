@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Design Layout-Refiner LLM System Prompt
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Create and optimize the system prompt for the Layout-Refiner GPT that converts JSON layout to EPUB-ready XHTML
+# Details:
+Implement the exact system prompt specified in PRD for Layout-Refiner GPT. Ensure prompt handles: absolute positioning with bbox mapping, line break preservation, page margin respect (72pt top/left/right, 60pt bottom), image embedding with alt text, page number placement bottom-right, semantic page breaks with role='doc-pagebreak'. Make prompt parameterizable for different margin configurations.
+
+# Test Strategy:
+Test prompt with sample page JSON data. Verify output is valid XHTML5, positioning is accurate, images are properly referenced, and page numbers are correctly placed. Validate against EPUB3 standards.

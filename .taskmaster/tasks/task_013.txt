@@ -1,0 +1,11 @@
+# Task ID: 13
+# Title: Add Caching and Performance Optimization
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Implement caching mechanisms and performance optimizations for large PDF processing
+# Details:
+Implement page-level caching using hash of text + bboxes to avoid redundant LLM calls. Add disk-based cache for extracted layouts. Implement parallel processing for independent pages. Add memory management for large PDFs. Create performance monitoring and cost estimation features.
+
+# Test Strategy:
+Test caching effectiveness with documents containing duplicate pages. Measure performance improvements with parallel processing. Validate memory usage with large PDF files. Test cost estimation accuracy.

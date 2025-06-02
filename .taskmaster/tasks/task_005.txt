@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Create Image Extraction and Management System
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement image extraction from PDF and organize them for EPUB packaging
+# Details:
+Create ImageExtractor class to extract images from PDF using PyMuPDF. Save images to OEBPS/Images directory with consistent naming (img_XXXX.png/jpg). Maintain image references mapping for XHTML generation. Handle image format conversion if needed. Preserve aspect ratios and quality. Generate checksums for QA validation.
+
+# Test Strategy:
+Extract images from test PDFs and verify they match original quality and dimensions. Test image reference mapping accuracy. Validate image formats are EPUB-compatible (PNG, JPEG, SVG).

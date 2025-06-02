@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Implement Font Extraction and Embedding
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Extract fonts from PDF and embed them in EPUB with proper licensing considerations
+# Details:
+Create FontExtractor class using PyMuPDF to extract embedded fonts from PDF. Save fonts to OEBPS/Fonts directory. Generate @font-face CSS declarations. Handle font licensing validation and warnings. Support common font formats (TTF, OTF, WOFF). Map font names from PDF to CSS font-family declarations.
+
+# Test Strategy:
+Extract fonts from test PDFs and verify they render correctly in EPUB readers. Test font licensing detection. Validate @font-face CSS syntax and font file integrity.

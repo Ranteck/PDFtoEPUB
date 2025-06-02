@@ -1,0 +1,143 @@
+## ⚙️ Diseño de alto nivel para un **PDF → EPUB** “layout-preserving”
+
+| Fase                              | Herramienta principal                                                                     | Propósito                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. **Entrada**                    | PDF (vectorial o escaneado)                                                               | —                                                                                                                                               |
+| 1. **Extracción estructural**     | **Docling** (`DocumentConverter`) + PyMuPDF<br/>- fallback: `pdfminer.six` + `pdfplumber` | Obtener un JSON con texto, imágenes, tablas y sus *bounding-boxes* (coordenadas absolutas).  ([arXiv][1])                                       |
+| 2. **Render intermedio HTML-CSS** | Render-Agent ↓                                                                            | Genera XHTML por página, aplicando *absolute-positioning* y `@page` para márgenes.                                                              |
+| 3. **Post-procesado con LLM**     | *Layout-Refiner LLM* (prompt abajo)                                                       | Corrige saltos de línea, confirma que <span class="page-number">n</span> esté en la esquina inferior y que las imágenes mantengan aspect-ratio. |
+| 4. **Empaquetado EPUB 3**         | `ebooklib` (o `calibre` CLI `ebook-convert`)                                              | Ensambla los XHTML + CSS + imágenes + `toc.ncx` y `content.opf`.                                                                                |
+| 5. **QA Agent**                   | LLM o pruebas automáticas                                                                 | Valida:<br/>• n.º de páginas PDF ≡ n.º de `page.xhtml`<br/>• Checksum de cada imagen<br/>• No hay texto huérfano fuera de su *bbox*.            |
+
+<details>
+<summary>Por qué esta pila</summary>
+
+* **Docling** es un toolkit OSS (MIT) 2025 que integra modelos SOTA (DocLayNet, TableFormer) y ya expone una API Python para conversión estructurada; evita que tengas que entrenar tu propio detector. ([arXiv][1])
+* **pdf2htmlEX** es otra vía rápida si solo quieres un EPUB “fixed-layout” (haz `pdf2htmlEX && ebooklib`). El script comunitario *pdf2epubEX* ya lo automatiza, pero no limpia números de línea. ([GitHub][2])
+* **overcuriousity/pdf2epub** usa un modelo ligero para “intelligent layout detection” y escupe EPUB/Markdown; útil como baseline o para robar ideas de CSS. ([GitHub][3])
+
+</details>
+
+---
+
+## 🧠 **System Prompt** (para el *Layout-Refiner LLM*)
+
+> **You are `Layout-Refiner GPT`, an expert typesetter.**
+> **Input**:
+>
+> ```json
+> {
+>   "page_width_pt": 595,
+>   "page_height_pt": 842,
+>   "elements": [
+>     {"type":"text","bbox":[72,72,523,90],"font":"Times","size":12,"content":"Chapter 1  Introduction"},
+>     {"type":"image","bbox":[90,120,505,320],"ref":"img_0003.png"},
+>     …  
+>   ],
+>   "page_number": 17
+> }
+> ```
+>
+> **Output**: valid **EPUB-ready XHTML 5** *fragment* that:
+>
+> 1. **Preserves absolute geometry**: map each bbox to `style="position:absolute; left:Xpt; top:Ypt; width:Wpt; height:Hpt;"`.
+> 2. **Maintains line breaks**: never merge consecutive text nodes; honour original ordering.
+> 3. **Keeps page margins**: respect `72 pt` top/left/right and `60 pt` bottom (configurable via variables).
+> 4. **Embeds images** with `<img src="../images/{{ref}}"/>`, adding `alt=""` unless OCR provides alt text.
+> 5. Places `<span class="page-number">{{page_number}}</span>` **bottom-right** using CSS (`position:absolute; right:36pt; bottom:24pt; font-size:8pt;`).
+> 6. Adds `role="doc-pagebreak"` on the outer `<section>` for semantic page breaks.
+> 7. Returns **ONLY** the fragment; no explanatory prose.
+
+(The same prompt can be parameterised; give it per page, stream the XHTML back, then assemble.)
+
+---
+
+## 🐍 **Script Minimal-Viable (resumido)**
+
+```python
+import subprocess, tempfile, pathlib, json
+from ebooklib import epub
+from docling.document_converter import DocumentConverter
+
+PDF_PATH = "input.pdf"
+WORK_DIR = pathlib.Path(tempfile.mkdtemp())
+
+# 1️⃣  Parse PDF ➜ JSON layout
+converter = DocumentConverter()
+doc = converter.convert(PDF_PATH)
+layout = doc.export_structure()          # JSON with bbox & images
+
+with open(WORK_DIR/"layout.json","w") as f:
+    json.dump(layout, f, indent=2)
+
+# 2️⃣  Feed pages to the LLM (pseudo-code)
+from openai import OpenAI
+client = OpenAI()
+def refine(page):
+    prompt = SYSTEM_PROMPT + f"\n\nInput JSON:\n{json.dumps(page)}"
+    return client.chat.completions.create(model="gpt-4o-mini",
+                                          messages=[{"role":"system","content":prompt}]).choices[0].message.content
+
+xhtml_files = []
+for page in layout["pages"]:
+    xhtml = refine(page)
+    fname = WORK_DIR / f"page_{page['page_number']:04d}.xhtml"
+    fname.write_text(xhtml, encoding="utf-8")
+    xhtml_files.append(fname)
+
+# 3️⃣  Build EPUB
+book = epub.EpubBook()
+book.set_identifier("pdf-to-epub-demo")
+book.set_title("Mi Libro")
+book.set_language("es")
+
+for xhtml in xhtml_files:
+    chap = epub.EpubItem(uid=xhtml.stem, file_name=f"Text/{xhtml.name}",
+                         media_type="application/xhtml+xml",
+                         content=xhtml.read_bytes())
+    book.add_item(chap)
+
+book.spine = ["nav"] + [epub.Link(f"Text/{x.name}", x.stem, x.stem) for x in xhtml_files]
+book.add_item(epub.EpubNav())
+epub.write_epub("output.epub", book, {})
+```
+
+*Detalles omitidos*: guardar imágenes en `OEBPS/Images`, mapear fuentes (`@font-face`), y crear la hoja de estilos con los márgenes globales. Todo eso se puede derivar directamente de los metadatos de Docling.
+
+---
+
+## 🧐 Preguntas que decidirán los *trade-offs*
+
+1. **¿Fixed-layout o reflowable?**
+   *El pipeline arriba produce un EPUB 3 “paginated” pero sigue siendo reflowable si eliminas las posiciones absolutas.*
+2. **¿Necesitas fuentes incrustadas?** PyMuPDF permite extraerlas; hay licencias a considerar.
+3. **¿Toleras un fallback a OCR para PDFs escaneados?** Docling auto-detecta, pero aumentarás latencia.
+4. **¿Hasta qué punto quieres automatizar la limpieza (cabeceras/footers repetidos)?** Con un agente adicional que compare *TF-IDF* de cada línea es trivial eliminar duplicados.
+5. **¿Presupuestos y tiempos?** GPT-4o ≈ \$5/Mayo de 2025; coste por libro \~0.10 – 0.50 USD dependiendo de nº de páginas.
+
+---
+
+## 🚀 Pasos siguientes
+
+1. **Prototipa** con un PDF corto y verifica salida (Sigil o Thorium Reader).
+2. **Ajusta el prompt** para tus variantes (p. ej. márgenes distintos, idiomas RTL).
+3. Empaqueta todo en un CLI (`typer` o `click`) y orquesta con **LangGraph** si quieres agentes formally:
+   *Node1*: Extractor →
+   *Node2*: Layout-Refiner (LLM) →
+   *Node3*: QA/Repair →
+   *Node4*: Packager.
+4. Si precisas performance, cachea las llamadas a LLM para páginas idénticas (hash del texto + bboxes).
+
+---
+
+### 🎯 Conclusión rápida
+
+* **Docling** ya resuelve el 70 % del problema y es OSS.
+* La **prompt-engineering** fina + `ebooklib` completan el pipeline.
+* Añadir un QA Agent te da robustez enterprise sin sacrificar precisión.
+
+Avísame qué parte quieres que profundicemos (p. ej. receta LangGraph, limpieza de headers, o cómo incrustar fuentes).
+
+[1]: https://arxiv.org/html/2501.17887v1?utm_source=chatgpt.com "An Efficient Open-Source Toolkit for AI-driven Document Conversion"
+[2]: https://github.com/dodeeric/pdf2epubEX?utm_source=chatgpt.com "dodeeric/pdf2epubEX: Tool to convert a PDF file (myfile.pdf ... - GitHub"
+[3]: https://github.com/overcuriousity/pdf2epub?utm_source=chatgpt.com "overcuriousity/pdf2epub: Convert PDF files to nicely structured ..."

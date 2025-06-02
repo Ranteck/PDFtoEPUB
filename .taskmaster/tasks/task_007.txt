@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Create XHTML Page Generator
+# Status: pending
+# Dependencies: 4, 5, 6
+# Priority: high
+# Description: Implement the system that converts LLM-refined layout into complete XHTML pages
+# Details:
+Create XHTMLGenerator class that combines LLM output with proper XHTML5 structure. Add DOCTYPE, html, head, and body elements. Include CSS references, meta tags for EPUB3. Ensure each page has role='doc-pagebreak' on section element. Handle image src paths (../images/). Validate XHTML structure and fix common issues.
+
+# Test Strategy:
+Generate XHTML pages from test data and validate against XHTML5 and EPUB3 standards using validators. Test in multiple EPUB readers (Sigil, Thorium Reader). Verify image links and CSS application.

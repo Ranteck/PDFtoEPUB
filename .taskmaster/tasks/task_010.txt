@@ -1,0 +1,11 @@
+# Task ID: 10
+# Title: Implement QA Agent for Validation
+# Status: pending
+# Dependencies: 9
+# Priority: high
+# Description: Create automated quality assurance system to validate the conversion accuracy
+# Details:
+Create QAAgent class to validate: PDF page count equals XHTML page count, image checksums match between PDF and EPUB, no orphaned text outside bounding boxes, proper page number placement, XHTML validity, CSS syntax correctness. Generate detailed QA report with pass/fail status and specific issues found.
+
+# Test Strategy:
+Run QA validation on test conversions with known issues. Verify all validation rules catch expected problems. Test QA report generation and accuracy of issue detection.

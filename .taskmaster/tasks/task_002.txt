@@ -3,9 +3,9 @@
 # Status: pending
 # Dependencies: 1
 # Priority: high
-# Description: Create the core PDF parsing functionality using Docling's DocumentConverter to extract text, images, tables and bounding boxes
+# Description: Create the core PDF parsing module using Docling's DocumentConverter to extract text, images, tables and bounding boxes
 # Details:
-Implement PDFExtractor class using DocumentConverter from docling. Extract layout structure with bbox coordinates, text content, images, and metadata. Handle both vectorial and scanned PDFs. Include fallback to pdfminer.six + pdfplumber if Docling fails. Export structure to JSON format with page dimensions, elements array containing type, bbox, content, and references.
+Implement PDFExtractor class using DocumentConverter from docling. Extract layout structure with bbox coordinates, text content, images, and metadata. Handle both vectorial and scanned PDFs. Include fallback to pdfminer.six + pdfplumber for edge cases. Export structure to JSON format with page dimensions, elements array containing type, bbox, content, and references.
 
 # Test Strategy:
-Test with sample PDF files (both vectorial and scanned). Verify JSON output contains correct page count, bounding boxes are within page dimensions, and all text/images are captured. Compare extraction quality against manual inspection.
+Test with sample PDFs of different types (vectorial, scanned, complex layouts). Verify JSON output contains all required fields: page_width_pt, page_height_pt, elements with bbox coordinates, and proper image references.

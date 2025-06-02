@@ -1,11 +1,11 @@
 # Task ID: 4
-# Title: Implement LLM Integration for Layout Refinement
+# Title: Implement Image Extraction and Management
 # Status: pending
-# Dependencies: 3
-# Priority: high
-# Description: Create the LLM client integration to process page layouts through the Layout-Refiner prompt
+# Dependencies: 2
+# Priority: medium
+# Description: Extract images from PDF and manage them for EPUB packaging with proper referencing and format conversion
 # Details:
-Implement LayoutRefiner class using OpenAI client with gpt-4o-mini model. Create refine_page method that takes page JSON and returns XHTML fragment. Handle API rate limiting, retries, and error handling. Implement caching mechanism for identical pages (hash text + bboxes). Add configuration for different LLM providers if needed.
+Create ImageExtractor class to extract images from PDF using PyMuPDF. Save images in supported EPUB formats (PNG, JPEG, SVG). Maintain aspect ratios and original quality. Create image reference mapping for XHTML embedding. Store images in OEBPS/Images directory structure. Handle image metadata and generate proper alt text when available from OCR.
 
 # Test Strategy:
-Test with various page layouts including text-only, image-heavy, and mixed content pages. Verify XHTML output validity, measure processing time, and test caching functionality. Validate cost estimation per page.
+Extract images from test PDFs and verify format compatibility. Check image quality preservation and proper file naming. Validate image references match between extraction and XHTML generation.

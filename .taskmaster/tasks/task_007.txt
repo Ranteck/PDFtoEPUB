@@ -1,11 +1,11 @@
 # Task ID: 7
-# Title: Create XHTML Page Generator
+# Title: Create CSS Stylesheet Generator
 # Status: pending
-# Dependencies: 4, 5, 6
-# Priority: high
-# Description: Implement the system that converts LLM-refined layout into complete XHTML pages
+# Dependencies: 5, 6
+# Priority: medium
+# Description: Generate comprehensive CSS stylesheets for EPUB with page layouts, fonts, and positioning rules
 # Details:
-Create XHTMLGenerator class that combines LLM output with proper XHTML5 structure. Add DOCTYPE, html, head, and body elements. Include CSS references, meta tags for EPUB3. Ensure each page has role='doc-pagebreak' on section element. Handle image src paths (../images/). Validate XHTML structure and fix common issues.
+Implement CSSGenerator class to create master stylesheet for EPUB. Include @page rules for margins, font-face declarations for embedded fonts, absolute positioning classes, and responsive design considerations. Handle page-specific styling and global layout rules. Generate CSS for page numbers, headers, footers, and content positioning.
 
 # Test Strategy:
-Generate XHTML pages from test data and validate against XHTML5 and EPUB3 standards using validators. Test in multiple EPUB readers (Sigil, Thorium Reader). Verify image links and CSS application.
+Generate CSS from sample layout data. Validate CSS syntax and EPUB compatibility. Test stylesheet rendering across different EPUB readers.

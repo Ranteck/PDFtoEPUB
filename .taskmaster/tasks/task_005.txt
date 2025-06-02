@@ -1,11 +1,11 @@
 # Task ID: 5
-# Title: Create Image Extraction and Management System
+# Title: Create XHTML Page Generator
 # Status: pending
-# Dependencies: 2
-# Priority: medium
-# Description: Implement image extraction from PDF and organize them for EPUB packaging
+# Dependencies: 3, 4
+# Priority: high
+# Description: Implement the core logic to convert LLM-refined layout data into properly formatted XHTML pages with CSS styling
 # Details:
-Create ImageExtractor class to extract images from PDF using PyMuPDF. Save images to OEBPS/Images directory with consistent naming (img_XXXX.png/jpg). Maintain image references mapping for XHTML generation. Handle image format conversion if needed. Preserve aspect ratios and quality. Generate checksums for QA validation.
+Create XHTMLGenerator class that processes LLM output and generates complete XHTML pages. Apply absolute positioning CSS for each element based on bbox coordinates. Implement proper XHTML 5 structure with semantic page breaks (role='doc-pagebreak'). Generate CSS for margins, fonts, and positioning. Handle text elements, images, and page numbers with proper styling.
 
 # Test Strategy:
-Extract images from test PDFs and verify they match original quality and dimensions. Test image reference mapping accuracy. Validate image formats are EPUB-compatible (PNG, JPEG, SVG).
+Generate XHTML pages from sample layout data. Validate XHTML against EPUB 3 specifications. Test CSS positioning accuracy and verify page structure integrity.

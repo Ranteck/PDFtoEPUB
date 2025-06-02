@@ -1,11 +1,11 @@
 # Task ID: 14
-# Title: Create Comprehensive Test Suite
+# Title: Add Configuration Management System
 # Status: pending
 # Dependencies: 12
-# Priority: medium
-# Description: Implement comprehensive testing including unit tests, integration tests, and end-to-end validation
+# Priority: low
+# Description: Implement comprehensive configuration system for customizing conversion parameters
 # Details:
-Create test suite using pytest with: unit tests for each component class, integration tests for full pipeline, end-to-end tests with sample PDFs, performance benchmarks, regression tests for known issues. Include test data with various PDF types (vectorial, scanned, complex layouts). Add automated EPUB validation in tests.
+Create ConfigManager class to handle configuration files (YAML/JSON). Support settings for margins, fonts, LLM model selection, OCR parameters, image quality, and output format options. Implement configuration validation and default value handling. Allow per-project and global configuration files.
 
 # Test Strategy:
-Achieve >90% code coverage. Test with diverse PDF samples including edge cases. Validate test suite catches regressions. Measure and track performance benchmarks over time.
+Test configuration loading and validation. Verify default values and override behavior. Check configuration file format validation and error handling.

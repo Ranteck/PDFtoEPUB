@@ -1,11 +1,11 @@
 # Task ID: 12
-# Title: Implement CLI Interface with Typer
+# Title: Create CLI Interface with Typer
 # Status: pending
-# Dependencies: 10, 11
+# Dependencies: 8, 9
 # Priority: medium
-# Description: Create command-line interface for the PDF to EPUB converter with configuration options
+# Description: Build command-line interface for the PDF to EPUB converter with configuration options
 # Details:
-Create CLI using typer with commands for: convert (main conversion), validate (QA only), extract (structure only). Add options for: output directory, LLM model selection, margin configuration, header/footer cleaning, font embedding, fixed vs reflowable layout. Include progress bars and verbose logging options.
+Implement CLI using typer library. Provide options for input PDF path, output EPUB path, layout mode (fixed/reflowable), margin settings, OCR enable/disable, and quality settings. Include progress indicators and verbose logging. Support batch processing and configuration files.
 
 # Test Strategy:
-Test all CLI commands and options. Verify help text accuracy. Test error handling for invalid inputs. Validate progress reporting and logging functionality.
+Test CLI with various parameter combinations. Verify all options work correctly and provide appropriate error messages. Test batch processing functionality.

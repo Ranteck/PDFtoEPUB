@@ -4,19 +4,19 @@
       "id": 1,
       "title": "Setup Project Repository and Dependencies",
       "description": "Initialize the project structure and install required dependencies including Docling, PyMuPDF, ebooklib, and OpenAI client",
-      "details": "Create project structure with directories for src/, tests/, docs/. Install dependencies: pip install docling pymupdf ebooklib openai typer pathlib. Setup virtual environment and requirements.txt. Initialize git repository with .gitignore for Python projects.",
-      "testStrategy": "Verify all dependencies are installed correctly by importing each module. Test that Docling DocumentConverter can be instantiated without errors.",
+      "details": "Create project structure with directories for src/, tests/, docs/. Install dependencies: pip install docling pymupdf ebooklib openai pdfminer.six pdfplumber typer pathlib. Setup virtual environment and requirements.txt. Initialize git repository with .gitignore for Python projects.",
+      "testStrategy": "Verify all dependencies import successfully and check version compatibility. Test basic imports in Python REPL.",
       "priority": "high",
       "dependencies": [],
-      "status": "pending",
+      "status": "in-progress",
       "subtasks": []
     },
     {
       "id": 2,
       "title": "Implement PDF Structure Extraction with Docling",
-      "description": "Create the core PDF parsing functionality using Docling's DocumentConverter to extract text, images, tables and bounding boxes",
-      "details": "Implement PDFExtractor class using DocumentConverter from docling. Extract layout structure with bbox coordinates, text content, images, and metadata. Handle both vectorial and scanned PDFs. Include fallback to pdfminer.six + pdfplumber if Docling fails. Export structure to JSON format with page dimensions, elements array containing type, bbox, content, and references.",
-      "testStrategy": "Test with sample PDF files (both vectorial and scanned). Verify JSON output contains correct page count, bounding boxes are within page dimensions, and all text/images are captured. Compare extraction quality against manual inspection.",
+      "description": "Create the core PDF parsing module using Docling's DocumentConverter to extract text, images, tables and bounding boxes",
+      "details": "Implement PDFExtractor class using DocumentConverter from docling. Extract layout structure with bbox coordinates, text content, images, and metadata. Handle both vectorial and scanned PDFs. Include fallback to pdfminer.six + pdfplumber for edge cases. Export structure to JSON format with page dimensions, elements array containing type, bbox, content, and references.",
+      "testStrategy": "Test with sample PDFs of different types (vectorial, scanned, complex layouts). Verify JSON output contains all required fields: page_width_pt, page_height_pt, elements with bbox coordinates, and proper image references.",
       "priority": "high",
       "dependencies": [
         1
@@ -26,10 +26,10 @@
     },
     {
       "id": 3,
-      "title": "Design Layout-Refiner LLM System Prompt",
-      "description": "Create and optimize the system prompt for the Layout-Refiner GPT that converts JSON layout to EPUB-ready XHTML",
-      "details": "Implement the exact system prompt specified in PRD for Layout-Refiner GPT. Ensure prompt handles: absolute positioning with bbox mapping, line break preservation, page margin respect (72pt top/left/right, 60pt bottom), image embedding with alt text, page number placement bottom-right, semantic page breaks with role='doc-pagebreak'. Make prompt parameterizable for different margin configurations.",
-      "testStrategy": "Test prompt with sample page JSON data. Verify output is valid XHTML5, positioning is accurate, images are properly referenced, and page numbers are correctly placed. Validate against EPUB3 standards.",
+      "title": "Create Layout-Refiner LLM System Prompt",
+      "description": "Implement the system prompt and LLM integration for converting extracted layout JSON to EPUB-ready XHTML fragments",
+      "details": "Create LayoutRefinerLLM class with the specified system prompt. Implement OpenAI client integration using gpt-4o-mini model. Handle JSON input with page dimensions and elements array. Ensure output generates valid XHTML 5 fragments with absolute positioning, preserved line breaks, proper margins (72pt top/left/right, 60pt bottom), embedded images with alt tags, and page numbers in bottom-right corner.",
+      "testStrategy": "Test with sample page JSON inputs. Validate generated XHTML is well-formed XML. Check that absolute positioning CSS is correctly applied and page numbers are positioned as specified.",
       "priority": "high",
       "dependencies": [
         2
@@ -39,23 +39,10 @@
     },
     {
       "id": 4,
-      "title": "Implement LLM Integration for Layout Refinement",
-      "description": "Create the LLM client integration to process page layouts through the Layout-Refiner prompt",
-      "details": "Implement LayoutRefiner class using OpenAI client with gpt-4o-mini model. Create refine_page method that takes page JSON and returns XHTML fragment. Handle API rate limiting, retries, and error handling. Implement caching mechanism for identical pages (hash text + bboxes). Add configuration for different LLM providers if needed.",
-      "testStrategy": "Test with various page layouts including text-only, image-heavy, and mixed content pages. Verify XHTML output validity, measure processing time, and test caching functionality. Validate cost estimation per page.",
-      "priority": "high",
-      "dependencies": [
-        3
-      ],
-      "status": "pending",
-      "subtasks": []
-    },
-    {
-      "id": 5,
-      "title": "Create Image Extraction and Management System",
-      "description": "Implement image extraction from PDF and organize them for EPUB packaging",
-      "details": "Create ImageExtractor class to extract images from PDF using PyMuPDF. Save images to OEBPS/Images directory with consistent naming (img_XXXX.png/jpg). Maintain image references mapping for XHTML generation. Handle image format conversion if needed. Preserve aspect ratios and quality. Generate checksums for QA validation.",
-      "testStrategy": "Extract images from test PDFs and verify they match original quality and dimensions. Test image reference mapping accuracy. Validate image formats are EPUB-compatible (PNG, JPEG, SVG).",
+      "title": "Implement Image Extraction and Management",
+      "description": "Extract images from PDF and manage them for EPUB packaging with proper referencing and format conversion",
+      "details": "Create ImageExtractor class to extract images from PDF using PyMuPDF. Save images in supported EPUB formats (PNG, JPEG, SVG). Maintain aspect ratios and original quality. Create image reference mapping for XHTML embedding. Store images in OEBPS/Images directory structure. Handle image metadata and generate proper alt text when available from OCR.",
+      "testStrategy": "Extract images from test PDFs and verify format compatibility. Check image quality preservation and proper file naming. Validate image references match between extraction and XHTML generation.",
       "priority": "medium",
       "dependencies": [
         2
@@ -64,27 +51,40 @@
       "subtasks": []
     },
     {
+      "id": 5,
+      "title": "Create XHTML Page Generator",
+      "description": "Implement the core logic to convert LLM-refined layout data into properly formatted XHTML pages with CSS styling",
+      "details": "Create XHTMLGenerator class that processes LLM output and generates complete XHTML pages. Apply absolute positioning CSS for each element based on bbox coordinates. Implement proper XHTML 5 structure with semantic page breaks (role='doc-pagebreak'). Generate CSS for margins, fonts, and positioning. Handle text elements, images, and page numbers with proper styling.",
+      "testStrategy": "Generate XHTML pages from sample layout data. Validate XHTML against EPUB 3 specifications. Test CSS positioning accuracy and verify page structure integrity.",
+      "priority": "high",
+      "dependencies": [
+        3,
+        4
+      ],
+      "status": "pending",
+      "subtasks": []
+    },
+    {
       "id": 6,
-      "title": "Implement CSS Stylesheet Generation",
-      "description": "Generate the CSS stylesheet for absolute positioning and page layout styling",
-      "details": "Create CSSGenerator class to generate EPUB stylesheet. Include @page rules for margins, absolute positioning styles, page-number class styling (position:absolute; right:36pt; bottom:24pt; font-size:8pt), font-face declarations for embedded fonts. Make margins configurable (default 72pt top/left/right, 60pt bottom). Handle responsive design considerations.",
-      "testStrategy": "Validate generated CSS against EPUB3 standards. Test positioning accuracy in EPUB readers. Verify page margins and page number placement across different screen sizes.",
+      "title": "Implement Font Extraction and Embedding",
+      "description": "Extract fonts from PDF and embed them in EPUB with proper @font-face declarations",
+      "details": "Create FontExtractor class using PyMuPDF to extract embedded fonts from PDF. Convert fonts to web-compatible formats (WOFF, TTF). Generate @font-face CSS declarations. Handle font licensing considerations and provide fallback fonts. Map original font names to embedded font references in CSS.",
+      "testStrategy": "Extract fonts from PDFs with embedded fonts. Verify font files are valid and properly referenced in CSS. Test font rendering in EPUB readers.",
       "priority": "medium",
       "dependencies": [
-        3
+        2
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 7,
-      "title": "Create XHTML Page Generator",
-      "description": "Implement the system that converts LLM-refined layout into complete XHTML pages",
-      "details": "Create XHTMLGenerator class that combines LLM output with proper XHTML5 structure. Add DOCTYPE, html, head, and body elements. Include CSS references, meta tags for EPUB3. Ensure each page has role='doc-pagebreak' on section element. Handle image src paths (../images/). Validate XHTML structure and fix common issues.",
-      "testStrategy": "Generate XHTML pages from test data and validate against XHTML5 and EPUB3 standards using validators. Test in multiple EPUB readers (Sigil, Thorium Reader). Verify image links and CSS application.",
-      "priority": "high",
+      "title": "Create CSS Stylesheet Generator",
+      "description": "Generate comprehensive CSS stylesheets for EPUB with page layouts, fonts, and positioning rules",
+      "details": "Implement CSSGenerator class to create master stylesheet for EPUB. Include @page rules for margins, font-face declarations for embedded fonts, absolute positioning classes, and responsive design considerations. Handle page-specific styling and global layout rules. Generate CSS for page numbers, headers, footers, and content positioning.",
+      "testStrategy": "Generate CSS from sample layout data. Validate CSS syntax and EPUB compatibility. Test stylesheet rendering across different EPUB readers.",
+      "priority": "medium",
       "dependencies": [
-        4,
         5,
         6
       ],
@@ -93,26 +93,26 @@
     },
     {
       "id": 8,
-      "title": "Implement Font Extraction and Embedding",
-      "description": "Extract fonts from PDF and embed them in EPUB with proper licensing considerations",
-      "details": "Create FontExtractor class using PyMuPDF to extract embedded fonts from PDF. Save fonts to OEBPS/Fonts directory. Generate @font-face CSS declarations. Handle font licensing validation and warnings. Support common font formats (TTF, OTF, WOFF). Map font names from PDF to CSS font-family declarations.",
-      "testStrategy": "Extract fonts from test PDFs and verify they render correctly in EPUB readers. Test font licensing detection. Validate @font-face CSS syntax and font file integrity.",
-      "priority": "medium",
+      "title": "Implement EPUB Package Builder",
+      "description": "Create the EPUB packaging system using ebooklib to assemble XHTML pages, CSS, images, and metadata",
+      "details": "Create EPUBBuilder class using ebooklib. Assemble XHTML pages in correct order, embed CSS stylesheets, include extracted images in OEBPS/Images directory. Generate content.opf manifest, toc.ncx navigation, and proper spine ordering. Set EPUB metadata (title, language, identifier). Handle EPUB 3 specifications compliance.",
+      "testStrategy": "Build complete EPUB from test data. Validate EPUB structure using epubcheck tool. Test EPUB opening in multiple readers (Calibre, Adobe Digital Editions, Thorium Reader).",
+      "priority": "high",
       "dependencies": [
-        2
+        5,
+        7
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 9,
-      "title": "Create EPUB Package Builder",
-      "description": "Implement the EPUB3 packaging system using ebooklib to assemble all components",
-      "details": "Create EPUBBuilder class using ebooklib. Assemble XHTML pages, CSS, images, and fonts into EPUB structure. Generate content.opf manifest, toc.ncx navigation, and spine ordering. Set proper metadata (title, language, identifier). Handle EPUB3 fixed-layout properties if needed. Create navigation document.",
-      "testStrategy": "Generate complete EPUB files and validate using EPUBCheck tool. Test in multiple EPUB readers for compatibility. Verify all resources are properly referenced and accessible.",
-      "priority": "high",
+      "title": "Create QA Agent for Validation",
+      "description": "Implement automated quality assurance to validate EPUB output against original PDF",
+      "details": "Create QAAgent class to validate EPUB output. Check page count matches between PDF and EPUB. Verify image checksums and integrity. Validate no orphaned text outside bounding boxes. Check XHTML well-formedness and EPUB specification compliance. Implement automated tests for layout preservation and content accuracy.",
+      "testStrategy": "Run QA validation on generated EPUBs. Compare page counts, image integrity, and text positioning. Verify all validation checks pass for sample documents.",
+      "priority": "medium",
       "dependencies": [
-        7,
         8
       ],
       "status": "pending",
@@ -120,23 +120,23 @@
     },
     {
       "id": 10,
-      "title": "Implement QA Agent for Validation",
-      "description": "Create automated quality assurance system to validate the conversion accuracy",
-      "details": "Create QAAgent class to validate: PDF page count equals XHTML page count, image checksums match between PDF and EPUB, no orphaned text outside bounding boxes, proper page number placement, XHTML validity, CSS syntax correctness. Generate detailed QA report with pass/fail status and specific issues found.",
-      "testStrategy": "Run QA validation on test conversions with known issues. Verify all validation rules catch expected problems. Test QA report generation and accuracy of issue detection.",
-      "priority": "high",
+      "title": "Implement Header/Footer Detection and Cleanup",
+      "description": "Add intelligent detection and removal of repetitive headers and footers across pages",
+      "details": "Create HeaderFooterCleaner class using TF-IDF comparison to identify repetitive text elements across pages. Detect common headers, footers, and page numbers that appear in similar positions. Implement configurable thresholds for automatic removal. Preserve intentional repetitive elements like chapter titles.",
+      "testStrategy": "Test with documents containing repetitive headers/footers. Verify correct identification and removal without affecting content. Check preservation of legitimate repetitive elements.",
+      "priority": "low",
       "dependencies": [
-        9
+        3
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 11,
-      "title": "Create Header/Footer Cleanup System",
-      "description": "Implement automatic detection and removal of repetitive headers and footers using TF-IDF analysis",
-      "details": "Create HeaderFooterCleaner class using TF-IDF to identify repetitive text elements across pages. Detect headers (top 10% of page) and footers (bottom 10% of page) that appear on multiple pages. Remove or mark as metadata rather than content. Handle page numbers, chapter titles, and book titles appropriately. Make cleaning configurable.",
-      "testStrategy": "Test with documents containing repetitive headers/footers. Verify correct identification and removal without affecting unique content. Validate that page numbers and chapter titles are handled appropriately.",
+      "title": "Add OCR Fallback for Scanned PDFs",
+      "description": "Implement OCR processing for scanned PDFs using Docling's auto-detection capabilities",
+      "details": "Extend PDFExtractor to handle scanned PDFs with OCR processing. Use Docling's auto-detection to identify scanned content. Implement OCR text extraction with proper bounding box mapping. Handle mixed content (vectorial + scanned pages). Provide quality metrics for OCR accuracy and confidence scores.",
+      "testStrategy": "Test with scanned PDF samples. Verify OCR text extraction accuracy and proper bbox mapping. Compare processing time and quality between vectorial and scanned documents.",
       "priority": "medium",
       "dependencies": [
         2
@@ -146,38 +146,38 @@
     },
     {
       "id": 12,
-      "title": "Implement CLI Interface with Typer",
-      "description": "Create command-line interface for the PDF to EPUB converter with configuration options",
-      "details": "Create CLI using typer with commands for: convert (main conversion), validate (QA only), extract (structure only). Add options for: output directory, LLM model selection, margin configuration, header/footer cleaning, font embedding, fixed vs reflowable layout. Include progress bars and verbose logging options.",
-      "testStrategy": "Test all CLI commands and options. Verify help text accuracy. Test error handling for invalid inputs. Validate progress reporting and logging functionality.",
+      "title": "Create CLI Interface with Typer",
+      "description": "Build command-line interface for the PDF to EPUB converter with configuration options",
+      "details": "Implement CLI using typer library. Provide options for input PDF path, output EPUB path, layout mode (fixed/reflowable), margin settings, OCR enable/disable, and quality settings. Include progress indicators and verbose logging. Support batch processing and configuration files.",
+      "testStrategy": "Test CLI with various parameter combinations. Verify all options work correctly and provide appropriate error messages. Test batch processing functionality.",
       "priority": "medium",
       "dependencies": [
-        10,
-        11
+        8,
+        9
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 13,
-      "title": "Add Caching and Performance Optimization",
-      "description": "Implement caching mechanisms and performance optimizations for large PDF processing",
-      "details": "Implement page-level caching using hash of text + bboxes to avoid redundant LLM calls. Add disk-based cache for extracted layouts. Implement parallel processing for independent pages. Add memory management for large PDFs. Create performance monitoring and cost estimation features.",
-      "testStrategy": "Test caching effectiveness with documents containing duplicate pages. Measure performance improvements with parallel processing. Validate memory usage with large PDF files. Test cost estimation accuracy.",
-      "priority": "medium",
+      "title": "Implement LLM Response Caching",
+      "description": "Add caching mechanism for LLM responses to improve performance and reduce costs",
+      "details": "Create CacheManager class to cache LLM responses based on content hash. Hash text content and bbox coordinates to identify identical pages. Implement persistent cache storage using SQLite or file-based system. Add cache invalidation and cleanup mechanisms. Include cache statistics and hit rate monitoring.",
+      "testStrategy": "Test caching with documents containing similar pages. Verify cache hits reduce LLM API calls. Check cache persistence across application restarts and validate hash collision handling.",
+      "priority": "low",
       "dependencies": [
-        4
+        3
       ],
       "status": "pending",
       "subtasks": []
     },
     {
       "id": 14,
-      "title": "Create Comprehensive Test Suite",
-      "description": "Implement comprehensive testing including unit tests, integration tests, and end-to-end validation",
-      "details": "Create test suite using pytest with: unit tests for each component class, integration tests for full pipeline, end-to-end tests with sample PDFs, performance benchmarks, regression tests for known issues. Include test data with various PDF types (vectorial, scanned, complex layouts). Add automated EPUB validation in tests.",
-      "testStrategy": "Achieve >90% code coverage. Test with diverse PDF samples including edge cases. Validate test suite catches regressions. Measure and track performance benchmarks over time.",
-      "priority": "medium",
+      "title": "Add Configuration Management System",
+      "description": "Implement comprehensive configuration system for customizing conversion parameters",
+      "details": "Create ConfigManager class to handle configuration files (YAML/JSON). Support settings for margins, fonts, LLM model selection, OCR parameters, image quality, and output format options. Implement configuration validation and default value handling. Allow per-project and global configuration files.",
+      "testStrategy": "Test configuration loading and validation. Verify default values and override behavior. Check configuration file format validation and error handling.",
+      "priority": "low",
       "dependencies": [
         12
       ],
@@ -186,13 +186,12 @@
     },
     {
       "id": 15,
-      "title": "Create Documentation and Deployment Package",
-      "description": "Generate comprehensive documentation and prepare the system for deployment",
-      "details": "Create documentation including: API reference, usage examples, configuration guide, troubleshooting guide, performance tuning tips. Add README with installation and quick start. Create Docker container for easy deployment. Add example scripts and sample outputs. Document licensing considerations for fonts and content.",
-      "testStrategy": "Validate documentation accuracy by following setup instructions on clean environment. Test Docker container deployment. Verify all examples work as documented. Get feedback from potential users on documentation clarity.",
-      "priority": "low",
+      "title": "Create Comprehensive Test Suite and Documentation",
+      "description": "Develop complete test coverage and user documentation for the PDF to EPUB converter",
+      "details": "Create comprehensive test suite using pytest. Include unit tests for all classes, integration tests for full conversion pipeline, and performance benchmarks. Create user documentation with installation guide, usage examples, configuration reference, and troubleshooting guide. Add API documentation and developer setup instructions.",
+      "testStrategy": "Achieve >90% test coverage. Verify all test cases pass consistently. Test documentation examples work correctly. Validate installation instructions on clean environments.",
+      "priority": "medium",
       "dependencies": [
-        13,
         14
       ],
       "status": "pending",

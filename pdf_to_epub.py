@@ -53,7 +53,7 @@ def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DocumentCo
         except ImportError:
             print("Warning: InputFormat could not be imported. PDF parsing might be configured incorrectly.")
             # Fallback or error, for now, let's assume it might work without explicit InputFormat if default
-            converter = DocumentConverter() 
+            converter = DocumentConverter()
         else:
             converter = DocumentConverter(
                 format_options={
@@ -61,20 +61,30 @@ def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DocumentCo
                 }
             )
 
-        doc_object = converter.convert(str(pdf_path)) # This is the 'doc_object'
-        layout_data = doc_object.export_structure()
+        # converter.convert() returns a ConversionResult object.
+        # The actual DoclingDocument is in its 'document' attribute.
+        conversion_result = converter.convert(str(pdf_path))
+
+        if not conversion_result or not hasattr(conversion_result, 'document'):
+            print("Error: PDF conversion did not return a valid document object.")
+            return None, {}
+
+        docling_document = conversion_result.document # This is the actual document model
+        layout_data = docling_document.export_structure()
 
         layout_json_path = work_dir / "layout.json"
         with open(layout_json_path, "w") as f:
             json.dump(layout_data, f, indent=2)
-        
+
         print(f"PDF layout saved to: {layout_json_path}")
-        return doc_object, layout_data
-    except Exception as e:
+        # Return the DoclingDocument model, not the ConversionResult
+        return docling_document, layout_data
+    except Exception as e: # This will catch docling.api.errors.ConversionError too
         print(f"Error parsing PDF: {e}")
         return None, {}
 
-def extract_and_save_images(doc_object, layout_data: dict, images_output_dir: Path) -> dict:
+# The 'doc_object' parameter below should be the DoclingDocument model
+def extract_and_save_images(docling_document, layout_data: dict, images_output_dir: Path) -> dict:
     """
     Extracts images referenced in layout_data from the doc_object and saves them.
 
@@ -87,14 +97,15 @@ def extract_and_save_images(doc_object, layout_data: dict, images_output_dir: Pa
         A dictionary mapping image reference names to their relative paths in the EPUB.
     """
     image_references = {}
-    if not doc_object or not hasattr(doc_object, 'pictures'):
-        print("Warning: doc_object is None or does not have 'pictures' attribute. Skipping image extraction.")
+    # Parameter renamed to docling_document for clarity
+    if not docling_document or not hasattr(docling_document, 'pictures'):
+        print("Warning: docling_document is None or does not have 'pictures' attribute. Skipping image extraction.")
         return image_references
-    
+
     # Create a lookup for PictureItems by their self_ref
     picture_item_lookup = {}
     try:
-        for pic_item in doc_object.pictures: # doc_object.pictures should be a list of PictureItem
+        for pic_item in docling_document.pictures: # Use the passed DoclingDocument
             if isinstance(pic_item, PictureItem) and hasattr(pic_item, 'self_ref'):
                 picture_item_lookup[pic_item.self_ref] = pic_item
             elif isinstance(pic_item, PictureItem) and hasattr(pic_item, 'get_ref'):
@@ -113,20 +124,21 @@ def extract_and_save_images(doc_object, layout_data: dict, images_output_dir: Pa
                     continue
 
                 picture_item = picture_item_lookup.get(img_ref)
-                
+
                 if picture_item:
                     try:
                         # Attempt to get the PIL image object
-                        pil_image = picture_item.get_image(doc_object) # Pass the main doc_object
+                        # Pass the DoclingDocument instance to get_image
+                        pil_image = picture_item.get_image(docling_document)
 
                         if pil_image:
                             # Sanitize img_ref to create a valid filename, e.g., replace '#' and '/'
                             sanitized_ref = img_ref.replace("#/", "").replace("/", "_")
                             image_filename = f"{sanitized_ref}.png" # Assuming PNG, could check mimetype
                             image_save_path = images_output_dir / image_filename
-                            
+
                             pil_image.save(image_save_path, format="PNG")
-                            
+
                             # Path relative to OEBPS (parent of images_output_dir)
                             relative_path = image_save_path.relative_to(images_output_dir.parent)
                             image_references[img_ref] = str(relative_path)
@@ -143,7 +155,7 @@ def extract_and_save_images(doc_object, layout_data: dict, images_output_dir: Pa
                     print(f"Warning: Image reference '{img_ref}' from layout_data not found in doc_object.pictures via self_ref.")
                     # Placeholder for trying to get image via PyMuPDF if docling fails or ref is different
                     # For now, just note it's missing.
-                    # image_bytes = get_image_with_pymupdf(pdf_path, img_ref_details_from_layout) 
+                    # image_bytes = get_image_with_pymupdf(pdf_path, img_ref_details_from_layout)
                     # if image_bytes: ... save ...
 
     return image_references
@@ -243,7 +255,7 @@ def refine_page_to_xhtml(page_data: dict, page_number: int, client: openai.OpenA
                 # {"role": "user", "content": page_json_for_llm}
             ]
         )
-        
+
         xhtml_content = completion.choices[0].message.content
         if not xhtml_content:
             print(f"Error: LLM returned empty content for page {page_number}.")
@@ -324,7 +336,7 @@ img {
 
 .page {
     /* Basic container for page content, can be expanded */
-    padding: 0; 
+    padding: 0;
 }
 
 .page-number {
@@ -410,7 +422,7 @@ def create_epub_file(
     for xhtml_file_path in xhtml_file_paths: # These are absolute paths
         # file_name for EpubHtml should be relative to OEBPS root, e.g., "Text/page_0001.xhtml"
         xhtml_oebps_filename = f"Text/{xhtml_file_path.name}"
-        
+
         item = epub.EpubHtml(
             uid=xhtml_file_path.stem, # Unique ID for the item, e.g., "page_0001"
             file_name=xhtml_oebps_filename,
@@ -418,13 +430,13 @@ def create_epub_file(
             language=language
         )
         item.content = xhtml_file_path.read_bytes()
-        
+
         if css_item: # Only add link if CSS item was successfully created
             # Relative path from Text/page.xhtml to Styles/style.css is ../Styles/style.css
             # css_oebps_path is "Styles/style.css"
             # So, Link href should be "../" + css_oebps_path
             item.add_link(epub.Link(href=f"../{css_oebps_path}", rel="stylesheet", type="text/css"))
-            
+
         book.add_item(item)
         epub_xhtml_items.append(item)
 
@@ -457,7 +469,7 @@ def create_epub_file(
 
     # Define Spine (order of content reading)
     # 'nav' refers to the EpubNav item automatically created by ebooklib
-    book.spine = ['nav'] + epub_xhtml_items 
+    book.spine = ['nav'] + epub_xhtml_items
     if not epub_xhtml_items: # If only nav, some readers might complain or show blank.
         # Could add a dummy page or handle this case, but for now, it's as is.
         print("Warning: Spine contains only 'nav' as no XHTML content pages were added.")
@@ -493,24 +505,24 @@ if __name__ == "__main__":
 
     if not cli_pdf_path.exists() or not cli_pdf_path.is_file():
         print(f"Error: PDF file not found at {cli_pdf_path}")
-        exit(1) 
+        exit(1)
 
     if args.output_epub_path:
         cli_output_epub_path = Path(args.output_epub_path)
     else:
         cli_output_epub_path = cli_pdf_path.with_suffix(".epub")
-    
+
     if cli_output_epub_path.parent and not cli_output_epub_path.parent.exists():
         cli_output_epub_path.parent.mkdir(parents=True, exist_ok=True)
 
     work_dir = create_epub_directories()
     print(f"EPUB directory structure created at: {work_dir}")
-    
+
     oebps_dir = work_dir / "OEBPS"
     images_dir = oebps_dir / "Images"
     styles_dir = oebps_dir / "Styles"
 
-    doc_object_from_parse = None 
+    doc_object_from_parse = None
     layout_json_data = {}
     image_references_map = {}
     xhtml_files = []
@@ -529,16 +541,16 @@ if __name__ == "__main__":
 
     print(f"Attempting to parse PDF: {cli_pdf_path}")
     doc_object_from_parse, layout_json_data = parse_pdf_to_layout_json(cli_pdf_path, work_dir)
-    
+
     if doc_object_from_parse and layout_json_data:
         print("PDF parsed and layout.json saved successfully.")
-        
+
         print(f"Attempting to extract images to: {images_dir}")
         image_references_map = extract_and_save_images(doc_object_from_parse, layout_json_data, images_dir)
-        
+
         if image_references_map:
             print("Image extraction attempt finished. References:")
-            for ref, path_val in image_references_map.items(): 
+            for ref, path_val in image_references_map.items():
                 print(f"  {ref} -> {path_val}")
         else:
             print("No images were extracted or mapped.")
@@ -547,15 +559,15 @@ if __name__ == "__main__":
             print("\nStarting LLM refinement for page content to XHTML...")
             pages_layout_data = layout_json_data.get('pages', [])
             for i, page_content_from_layout in enumerate(pages_layout_data):
-                actual_page_number = page_content_from_layout.get('page_no', i + 1) 
-                
+                actual_page_number = page_content_from_layout.get('page_no', i + 1)
+
                 xhtml_path = refine_page_to_xhtml(
                     page_content_from_layout, actual_page_number,
                     openai_client, work_dir, image_references_map
                 )
                 if xhtml_path:
                     xhtml_files.append(xhtml_path)
-            
+
             if xhtml_files:
                 print("\nGenerated XHTML files:")
                 for xp in xhtml_files: print(f"  {xp}")
@@ -572,10 +584,10 @@ if __name__ == "__main__":
             css_oebps_relative_path_cli = str(stylesheet_save_path.relative_to(oebps_dir))
 
             create_epub_file(
-                epub_path=cli_output_epub_path, 
+                epub_path=cli_output_epub_path,
                 title=book_title_cli,
-                language="en", 
-                identifier=f"urn:uuid:{book_title_cli}-{os.urandom(4).hex()}", 
+                language="en",
+                identifier=f"urn:uuid:{book_title_cli}-{os.urandom(4).hex()}",
                 xhtml_file_paths=xhtml_files,
                 image_paths_within_oebps=image_oebps_paths_list_cli,
                 css_path_within_oebps=css_oebps_relative_path_cli,
@@ -586,8 +598,8 @@ if __name__ == "__main__":
     else:
         print("PDF parsing failed or returned no data. Cannot proceed with EPUB generation.")
 
-    # import shutil 
-    # if work_dir and work_dir.exists(): 
+    # import shutil
+    # if work_dir and work_dir.exists():
     #     try:
     #         # shutil.rmtree(work_dir)
     #         print(f"Temporary directory {work_dir} not removed for inspection.")

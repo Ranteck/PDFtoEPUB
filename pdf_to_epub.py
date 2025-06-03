@@ -70,7 +70,7 @@ def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DocumentCo
             return None, {}
 
         docling_document = conversion_result.document # This is the actual document model
-        layout_data = docling_document.export_structure()
+        layout_data = docling_document.export_to_sexp() # Changed from export_structure()
 
         layout_json_path = work_dir / "layout.json"
         with open(layout_json_path, "w") as f:

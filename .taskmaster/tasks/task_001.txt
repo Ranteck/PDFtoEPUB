@@ -1,6 +1,6 @@
 # Task ID: 1
 # Title: Setup Project Repository and Dependencies
-# Status: in-progress
+# Status: done
 # Dependencies: None
 # Priority: high
 # Description: Initialize the project structure and install required dependencies including Docling, PyMuPDF, ebooklib, and OpenAI client

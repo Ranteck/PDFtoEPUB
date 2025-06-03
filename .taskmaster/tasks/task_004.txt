@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: Implement Image Extraction and Management
-# Status: pending
+# Status: in-progress
 # Dependencies: 2
 # Priority: medium
 # Description: Extract images from PDF and manage them for EPUB packaging with proper referencing and format conversion

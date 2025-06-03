@@ -1,6 +1,6 @@
 # Task ID: 3
 # Title: Create Layout-Refiner LLM System Prompt
-# Status: pending
+# Status: done
 # Dependencies: 2
 # Priority: high
 # Description: Implement the system prompt and LLM integration for converting extracted layout JSON to EPUB-ready XHTML fragments

@@ -1,0 +1,1113 @@
+TITLE: Installing Docling with pip
+DESCRIPTION: Simple pip installation command for the Docling package, which works across macOS, Linux, and Windows on both x86_64 and arm64 architectures.
+SOURCE: https://github.com/docling-project/docling/blob/main/README.md#2025-04-23_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+pip install docling
+```
+
+----------------------------------------
+
+TITLE: Converting Single Document with Docling Python
+DESCRIPTION: Demonstrates how to use the `DocumentConverter` class in Python to convert a single document, specified by a local path or URL. The example shows importing the class, creating an instance, calling the `convert` method, and exporting the result to Markdown format.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/usage/index.md#_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+
+source = "https://arxiv.org/pdf/2408.09869"  # PDF path or URL
+converter = DocumentConverter()
+result = converter.convert(source)
+print(result.document.export_to_markdown())  # output: "### Docling Technical Report[...]"
+```
+
+----------------------------------------
+
+TITLE: Installing Docling with pip
+DESCRIPTION: Basic installation command for Docling using pip package manager. Works on macOS, Linux, and Windows with support for both x86_64 and arm64 architectures.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/installation/index.md#2025-04-21_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+pip install docling
+```
+
+----------------------------------------
+
+TITLE: Implementing RAG with Azure AI Search and OpenAI in Python
+DESCRIPTION: This snippet demonstrates a complete RAG pipeline using Azure services. It includes functions for generating chat responses, embedding text, performing vector searches, and combining retrieved context with user queries to generate grounded responses.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_azuresearch.ipynb#2025-04-21_snippet_6
+
+LANGUAGE: python
+CODE:
+```
+from typing import Optional
+
+from azure.search.documents.models import VectorizableTextQuery
+
+
+def generate_chat_response(prompt: str, system_message: Optional[str] = None):
+    """
+    Generates a single-turn chat response using Azure OpenAI Chat.
+    If you need multi-turn conversation or follow-up queries, you'll have to
+    maintain the messages list externally.
+    """
+    messages = []
+    if system_message:
+        messages.append({"role": "system", "content": system_message})
+    messages.append({"role": "user", "content": prompt})
+
+    completion = openai_client.chat.completions.create(
+        model=AZURE_OPENAI_CHAT_MODEL, messages=messages, temperature=0.7
+    )
+    return completion.choices[0].message.content
+
+
+user_query = "What are the main advantages of using the Graph RAG approach for query-focused summarization compared to traditional RAG methods?"
+user_embed = embed_text(user_query)
+
+vector_query = VectorizableTextQuery(
+    text=user_query,  # passing in text for a hybrid search
+    k_nearest_neighbors=5,
+    fields="content_vector",
+)
+
+search_results = search_client.search(
+    search_text=user_query, vector_queries=[vector_query], select=["content"], top=10
+)
+
+retrieved_chunks = []
+for result in search_results:
+    snippet = result["content"]
+    retrieved_chunks.append(snippet)
+
+context_str = "\n---\n".join(retrieved_chunks)
+rag_prompt = f"""
+You are an AI assistant helping answering questions about Microsoft GraphRAG.
+Use ONLY the text below to answer the user's question.
+If the answer isn't in the text, say you don't know.
+
+Context:
+{context_str}
+
+Question: {user_query}
+Answer:
+"""
+
+final_answer = generate_chat_response(rag_prompt)
+
+console.print(Panel(rag_prompt, title="RAG Prompt", style="bold red"))
+console.print(Panel(final_answer, title="RAG Response", style="bold green"))
+```
+
+----------------------------------------
+
+TITLE: Implementing RAG with SimpleDirectoryReader
+DESCRIPTION: This snippet demonstrates how to use SimpleDirectoryReader with the Docling-based RAG pipeline. It processes documents from a directory, using the previously defined reader and node parser, and then performs querying on the processed documents.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_llamaindex.ipynb#2025-04-21_snippet_6
+
+LANGUAGE: python
+CODE:
+```
+from llama_index.core import SimpleDirectoryReader
+
+dir_reader = SimpleDirectoryReader(
+    input_dir=tmp_dir_path,
+    file_extractor={".pdf": reader},
+)
+
+vector_store = MilvusVectorStore(
+    uri=str(Path(mkdtemp()) / "docling.db"),  # or set as needed
+    dim=embed_dim,
+    overwrite=True,
+)
+index = VectorStoreIndex.from_documents(
+    documents=dir_reader.load_data(SOURCE),
+    transformations=[node_parser],
+    storage_context=StorageContext.from_defaults(vector_store=vector_store),
+    embed_model=EMBED_MODEL,
+)
+result = index.as_query_engine(llm=GEN_MODEL).query(QUERY)
+print(f"Q: {QUERY}\nA: {result.response.strip()}\n\nSources:")
+display([(n.text, n.metadata) for n in result.source_nodes])
+```
+
+----------------------------------------
+
+TITLE: Chunk Docling Document with HybridChunker (Python)
+DESCRIPTION: Demonstrates how to use a `Chunker`, specifically the `HybridChunker`, to divide a converted Docling document into smaller segments. It shows how to instantiate the chunker and specify a tokenizer.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/usage/index.md#_snippet_13
+
+LANGUAGE: python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+from docling.chunking import HybridChunker
+
+conv_res = DocumentConverter().convert("https://arxiv.org/pdf/2206.01062")
+doc = conv_res.document
+
+chunker = HybridChunker(tokenizer="BAAI/bge-small-en-v1.5")  # set tokenizer as needed
+chunk_iter = chunker.chunk(doc)
+```
+
+----------------------------------------
+
+TITLE: Access and Iterate DoclingDocument (Python)
+DESCRIPTION: Shows how to convert a single document using `convert`, access the resulting `DoclingDocument` object, print its element tree for inspection, and iterate through its items in reading order, handling different item types like text and tables.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/v2.md#_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+conv_result: ConversionResult = doc_converter.convert("https://arxiv.org/pdf/2408.09869") # previously `convert_single`
+
+## Inspect the converted document:
+conv_result.document.print_element_tree()
+
+## Iterate the elements in reading order, including hierarchy level:
+for item, level in conv_result.document.iterate_items():
+    if isinstance(item, TextItem):
+        print(item.text)
+    elif isinstance(item, TableItem):
+        table_df: pd.DataFrame = item.export_to_dataframe()
+        print(table_df.to_markdown())
+    elif ...:
+        #...
+
+```
+
+----------------------------------------
+
+TITLE: Installing Required Dependencies for RAG with Azure AI Search
+DESCRIPTION: Installs necessary Python packages including docling, azure-search-documents, azure-identity, openai, rich, torch, and python-dotenv.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_azuresearch.ipynb#2025-04-21_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+%pip install "docling~=2.12" azure-search-documents==11.5.2 azure-identity openai rich torch python-dotenv
+```
+
+----------------------------------------
+
+TITLE: Implementing RAG Pipeline with LangChain and Hugging Face
+DESCRIPTION: Creates the RAG pipeline using LangChain components. It sets up the retriever, language model, and chains for document retrieval and question answering. The pipeline uses Hugging Face's Inference API for the language model.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_langchain.ipynb#2025-04-21_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_huggingface import HuggingFaceEndpoint
+
+retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
+llm = HuggingFaceEndpoint(
+    repo_id=GEN_MODEL_ID,
+    huggingfacehub_api_token=HF_TOKEN,
+)
+
+
+def clip_text(text, threshold=100):
+    return f"{text[:threshold]}..." if len(text) > threshold else text
+
+question_answer_chain = create_stuff_documents_chain(llm, PROMPT)
+rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+resp_dict = rag_chain.invoke({"input": QUESTION})
+
+clipped_answer = clip_text(resp_dict["answer"], threshold=200)
+print(f"Question:\n{resp_dict['input']}\n\nAnswer:\n{clipped_answer}")
+for i, doc in enumerate(resp_dict["context"]):
+    print()
+    print(f"Source {i + 1}:")
+    print(f"  text: {json.dumps(clip_text(doc.page_content, threshold=350))}")
+    for key in doc.metadata:
+        if key != "pk":
+            val = doc.metadata.get(key)
+            clipped_val = clip_text(val) if isinstance(val, str) else val
+            print(f"  {key}: {clipped_val}")
+```
+
+----------------------------------------
+
+TITLE: Process Document and Chunk with Docling (Python)
+DESCRIPTION: Uses Docling's `DocumentConverter` to load a Markdown document from a URL and the `HierarchicalChunker` to process the document into a list of text chunks suitable for RAG.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_milvus.ipynb#_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+from docling_core.transforms.chunker import HierarchicalChunker
+
+from docling.document_converter import DocumentConverter
+
+converter = DocumentConverter()
+chunker = HierarchicalChunker()
+
+# Convert the input file to Docling Document
+source = "https://milvus.io/docs/overview.md"
+doc = converter.convert(source).document
+
+# Perform hierarchical chunking
+texts = [chunk.text for chunk in chunker.chunk(doc)]
+```
+
+----------------------------------------
+
+TITLE: Converting Document (Docling/Python)
+DESCRIPTION: Imports the `DocumentConverter` class from `docling.document_converter`. It then instantiates the converter and uses it to convert the document specified by `DOC_SOURCE` into a Docling document object, storing the result in the `doc` variable.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/hybrid_chunking.ipynb#_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+
+doc = DocumentConverter().convert(source=DOC_SOURCE).document
+```
+
+----------------------------------------
+
+TITLE: Docling v2 CLI Conversion Examples (Shell)
+DESCRIPTION: Provides examples of using the Docling v2 command-line interface to convert documents. It shows how to convert single files, specify multiple output formats, process directories, filter by input format, and control error handling during batch conversions.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/v2.md#_snippet_0
+
+LANGUAGE: shell
+CODE:
+```
+# Convert a single file to Markdown (default)
+docling myfile.pdf
+
+# Convert a single file to Markdown and JSON, without OCR
+docling myfile.pdf --to json --to md --no-ocr
+
+# Convert PDF files in input directory to Markdown (default)
+docling ./input/dir --from pdf
+
+# Convert PDF and Word files in input directory to Markdown and JSON
+docling ./input/dir --from pdf --from docx --to md --to json --output ./scratch
+
+# Convert all supported files in input directory to Markdown, but abort on first error
+docling ./input/dir --output ./scratch --abort-on-error
+
+```
+
+----------------------------------------
+
+TITLE: Add Single Document to Index - LlamaIndex Python
+DESCRIPTION: Loads a specific document file using the DoclingReader, applies the node parser transformation, and adds the resulting nodes to the existing VectorStoreIndex using the configured storage context and embedding model. This allows incremental updates to the index.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/backend_xml_rag.ipynb#_snippet_15
+
+LANGUAGE: python
+CODE:
+```
+index.from_documents(
+    documents=reader.load_data(TEMP_DIR / "nihpp-2024.12.26.630351v1.nxml"),
+    transformations=[node_parser],
+    storage_context=StorageContext.from_defaults(vector_store=vector_store),
+    embed_model=EMBED_MODEL,
+)
+```
+
+----------------------------------------
+
+TITLE: Installing Required Packages for RAG with Haystack and Docling
+DESCRIPTION: This snippet installs the necessary Python packages for implementing RAG with Haystack and Docling. It uses pip to install dependencies quietly and with conflict warnings suppressed.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_haystack.ipynb#2025-04-21_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+%pip install -q --progress-bar off --no-warn-conflicts docling-haystack haystack-ai docling pymilvus milvus-haystack sentence-transformers python-dotenv
+```
+
+----------------------------------------
+
+TITLE: Defining Main Parameters for RAG Pipeline
+DESCRIPTION: This snippet defines the main parameters for the RAG pipeline, including the embedding model, vector store URI, generative model, source document, and query. It uses HuggingFace models for embedding and generation.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_llamaindex.ipynb#2025-04-21_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.huggingface_api import HuggingFaceInferenceAPI
+
+EMBED_MODEL = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+MILVUS_URI = str(Path(mkdtemp()) / "docling.db")
+GEN_MODEL = HuggingFaceInferenceAPI(
+    token=_get_env_from_colab_or_os("HF_TOKEN"),
+    model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
+)
+SOURCE = "https://arxiv.org/pdf/2408.09869"  # Docling Technical Report
+QUERY = "Which are the main AI models in Docling?"
+
+embed_dim = len(EMBED_MODEL.get_text_embedding("hi"))
+```
+
+----------------------------------------
+
+TITLE: Converting Single Document with Docling CLI
+DESCRIPTION: Shows the basic usage of the Docling command-line interface to convert a single document provided as a URL. This command processes the document and outputs the result to the console.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/usage/index.md#_snippet_1
+
+LANGUAGE: console
+CODE:
+```
+docling https://arxiv.org/pdf/2206.01062
+```
+
+----------------------------------------
+
+TITLE: Implementing RAG Pipeline for Question Answering
+DESCRIPTION: This code sets up the RAG pipeline using Haystack components. It includes a text embedder, retriever, prompt builder, HuggingFace API generator, and answer builder. The pipeline is configured to process a question and generate an answer based on retrieved documents.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_haystack.ipynb#2025-04-21_snippet_3
+
+LANGUAGE: python
+CODE:
+```
+from haystack.components.builders import AnswerBuilder
+from haystack.components.builders.prompt_builder import PromptBuilder
+from haystack.components.generators import HuggingFaceAPIGenerator
+from haystack.utils import Secret
+
+prompt_template = """
+    Given these documents, answer the question.
+    Documents:
+    {% for doc in documents %}
+        {{ doc.content }}
+    {% endfor %}
+    Question: {{query}}
+    Answer:
+    """
+
+rag_pipe = Pipeline()
+rag_pipe.add_component(
+    "embedder",
+    SentenceTransformersTextEmbedder(model=EMBED_MODEL_ID),
+)
+rag_pipe.add_component(
+    "retriever",
+    MilvusEmbeddingRetriever(document_store=document_store, top_k=TOP_K),
+)
+rag_pipe.add_component("prompt_builder", PromptBuilder(template=prompt_template))
+rag_pipe.add_component(
+    "llm",
+    HuggingFaceAPIGenerator(
+        api_type="serverless_inference_api",
+        api_params={"model": GENERATION_MODEL_ID},
+        token=Secret.from_token(HF_TOKEN) if HF_TOKEN else None,
+    ),
+)
+rag_pipe.add_component("answer_builder", AnswerBuilder())
+rag_pipe.connect("embedder.embedding", "retriever")
+rag_pipe.connect("retriever", "prompt_builder.documents")
+rag_pipe.connect("prompt_builder", "llm")
+rag_pipe.connect("llm.replies", "answer_builder.replies")
+rag_pipe.connect("llm.meta", "answer_builder.meta")
+rag_pipe.connect("retriever", "answer_builder.documents")
+rag_res = rag_pipe.run(
+    {
+        "embedder": {"text": QUESTION},
+        "prompt_builder": {"query": QUESTION},
+        "answer_builder": {"query": QUESTION},
+    }
+)
+```
+
+----------------------------------------
+
+TITLE: Performing Semantic Search in Milvus Collection in Python
+DESCRIPTION: Executes a semantic search against the Milvus collection using the embedding of the `question`. It retrieves the top 3 most similar results based on the 'IP' metric and specifies that the 'text' field should be returned along with the search results.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_milvus.ipynb#_snippet_10
+
+LANGUAGE: python
+CODE:
+```
+search_res = milvus_client.search(
+    collection_name=collection_name,
+    data=[emb_text(question)],
+    limit=3,
+    search_params={"metric_type": "IP", "params": {}},
+    output_fields=["text"],
+)
+```
+
+----------------------------------------
+
+TITLE: Initializing Docling HierarchicalChunker (Python)
+DESCRIPTION: Initializes lists for texts and titles, then creates a `HierarchicalChunker` instance. It iterates through a list of documents (`docs`) and their corresponding titles (`source_titles`), applying the chunker to each document. The resulting text from each chunk and the original document title are appended to the respective lists. Requires `docling_core.transforms.chunker.HierarchicalChunker`.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_weaviate.ipynb#_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+from docling_core.transforms.chunker import HierarchicalChunker
+
+# Initialize lists for text, and titles
+texts, titles = [], []
+
+chunker = HierarchicalChunker()
+
+# Process each document in the list
+for doc, title in zip(docs, source_titles):  # Pair each document with its title
+    chunks = list(
+        chunker.chunk(doc)
+    )  # Perform hierarchical chunking and get text from chunks
+    for chunk in chunks:
+        texts.append(chunk.text)
+        titles.append(title)
+```
+
+----------------------------------------
+
+TITLE: Check GPU Availability (Python)
+DESCRIPTION: Checks for the presence of a CUDA or MPS (Metal Performance Shaders) enabled GPU using the PyTorch library. Raises an error if no compatible device is found.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_milvus.ipynb#_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+import torch
+
+# Check if GPU or MPS is available
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print(f"CUDA GPU is enabled: {torch.cuda.get_device_name(0)}")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+    print("MPS GPU is enabled.")
+else:
+    raise OSError(
+        "No GPU or MPS device found. Please check your environment and ensure GPU or MPS support is configured."
+    )
+```
+
+----------------------------------------
+
+TITLE: Installing Dependencies and Configuring Logging (Python)
+DESCRIPTION: This snippet installs the required Python packages: `docling`, `weaviate-client`, `rich`, and `torch`. It also imports necessary libraries and configures logging to suppress verbose output from the Weaviate client.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_weaviate.ipynb#_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+%%capture
+%pip install docling~="2.7.0"
+%pip install -U weaviate-client~="4.9.4"
+%pip install rich
+%pip install torch
+
+import logging
+import warnings
+
+warnings.filterwarnings("ignore")
+
+# Suppress Weaviate client logs
+logging.getLogger("weaviate").setLevel(logging.ERROR)
+```
+
+----------------------------------------
+
+TITLE: Implementing RAG with Markdown Export
+DESCRIPTION: This code demonstrates implementing a RAG pipeline using Docling's Markdown export. It uses DoclingReader for document loading, MarkdownNodeParser for parsing, and MilvusVectorStore for storage. The pipeline is then used to query the processed documents.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_llamaindex.ipynb#2025-04-21_snippet_3
+
+LANGUAGE: python
+CODE:
+```
+from llama_index.core import StorageContext, VectorStoreIndex
+from llama_index.core.node_parser import MarkdownNodeParser
+from llama_index.readers.docling import DoclingReader
+from llama_index.vector_stores.milvus import MilvusVectorStore
+
+reader = DoclingReader()
+node_parser = MarkdownNodeParser()
+
+vector_store = MilvusVectorStore(
+    uri=str(Path(mkdtemp()) / "docling.db"),  # or set as needed
+    dim=embed_dim,
+    overwrite=True,
+)
+index = VectorStoreIndex.from_documents(
+    documents=reader.load_data(SOURCE),
+    transformations=[node_parser],
+    storage_context=StorageContext.from_defaults(vector_store=vector_store),
+    embed_model=EMBED_MODEL,
+)
+result = index.as_query_engine(llm=GEN_MODEL).query(QUERY)
+print(f"Q: {QUERY}\nA: {result.response.strip()}\n\nSources:")
+display([(n.text, n.metadata) for n in result.source_nodes])
+```
+
+----------------------------------------
+
+TITLE: Querying Data with Similarity Search (Python)
+DESCRIPTION: Performs a similarity search using Weaviate's `near_text` method to find the most similar objects to a given query. It retrieves a limited number of results and includes metadata like distance.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_weaviate.ipynb#_snippet_11
+
+LANGUAGE: python
+CODE:
+```
+from weaviate.classes.query import MetadataQuery
+
+response = collection.query.near_text(
+    query="bert",
+    limit=2,
+    return_metadata=MetadataQuery(distance=True),
+    return_properties=["text", "title"],
+)
+
+for o in response.objects:
+    print(o.properties)
+    print(o.metadata.distance)
+```
+
+----------------------------------------
+
+TITLE: Implementing Indexing Pipeline for Document Processing
+DESCRIPTION: This snippet sets up the indexing pipeline using Haystack components. It includes the DoclingConverter, SentenceTransformersDocumentEmbedder, and DocumentWriter. The pipeline is configured based on the export type (DOC_CHUNKS or MARKDOWN).
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_haystack.ipynb#2025-04-21_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from docling_haystack.converter import DoclingConverter
+from haystack import Pipeline
+from haystack.components.embedders import (
+    SentenceTransformersDocumentEmbedder,
+    SentenceTransformersTextEmbedder,
+)
+from haystack.components.preprocessors import DocumentSplitter
+from haystack.components.writers import DocumentWriter
+from milvus_haystack import MilvusDocumentStore, MilvusEmbeddingRetriever
+
+from docling.chunking import HybridChunker
+
+document_store = MilvusDocumentStore(
+    connection_args={"uri": MILVUS_URI},
+    drop_old=True,
+    text_field="txt",  # set for preventing conflict with same-name metadata field
+)
+
+idx_pipe = Pipeline()
+idx_pipe.add_component(
+    "converter",
+    DoclingConverter(
+        export_type=EXPORT_TYPE,
+        chunker=HybridChunker(tokenizer=EMBED_MODEL_ID),
+    ),
+)
+idx_pipe.add_component(
+    "embedder",
+    SentenceTransformersDocumentEmbedder(model=EMBED_MODEL_ID),
+)
+idx_pipe.add_component("writer", DocumentWriter(document_store=document_store))
+if EXPORT_TYPE == ExportType.DOC_CHUNKS:
+    idx_pipe.connect("converter", "embedder")
+elif EXPORT_TYPE == ExportType.MARKDOWN:
+    idx_pipe.add_component(
+        "splitter",
+        DocumentSplitter(split_by="sentence", split_length=1),
+    )
+    idx_pipe.connect("converter.documents", "splitter.documents")
+    idx_pipe.connect("splitter.documents", "embedder.documents")
+else:
+    raise ValueError(f"Unexpected export type: {EXPORT_TYPE}")
+idx_pipe.connect("embedder", "writer")
+idx_pipe.run({"converter": {"paths": PATHS}})
+```
+
+----------------------------------------
+
+TITLE: Loading and Chunking Documents with DoclingLoader
+DESCRIPTION: Initializes the DoclingLoader to load and process documents. It also handles document chunking based on the specified export type, either using DoclingLoader's built-in chunking or MarkdownHeaderTextSplitter for markdown files.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_langchain.ipynb#2025-04-21_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from langchain_docling import DoclingLoader
+
+from docling.chunking import HybridChunker
+
+loader = DoclingLoader(
+    file_path=FILE_PATH,
+    export_type=EXPORT_TYPE,
+    chunker=HybridChunker(tokenizer=EMBED_MODEL_ID),
+)
+
+docs = loader.load()
+
+if EXPORT_TYPE == ExportType.DOC_CHUNKS:
+    splits = docs
+elif EXPORT_TYPE == ExportType.MARKDOWN:
+    from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+    splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=[
+            ("#", "Header_1"),
+            ("##", "Header_2"),
+            ("###", "Header_3"),
+        ],
+    )
+    splits = [split for doc in docs for split in splitter.split_text(doc.page_content)]
+else:
+    raise ValueError(f"Unexpected export type: {EXPORT_TYPE}")
+
+for d in splits[:3]:
+    print(f"- {d.page_content=}")
+print("...")
+```
+
+----------------------------------------
+
+TITLE: Installing Tesseract OCR on RHEL Systems
+DESCRIPTION: Console commands for installing Tesseract OCR engine on RHEL-based Linux distributions and setting the required TESSDATA_PREFIX environment variable.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/installation/index.md#2025-04-21_snippet_5
+
+LANGUAGE: bash
+CODE:
+```
+dnf install tesseract tesseract-devel tesseract-langpack-eng leptonica-devel
+TESSDATA_PREFIX=/usr/share/tesseract/tessdata/
+echo "Set TESSDATA_PREFIX=${TESSDATA_PREFIX}"
+```
+
+----------------------------------------
+
+TITLE: Installing Dependencies for RAG with LangChain and Docling
+DESCRIPTION: Installs the required Python packages for implementing RAG with LangChain and Docling integration. This includes langchain-docling, langchain-core, langchain-huggingface, langchain_milvus, and other dependencies.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_langchain.ipynb#2025-04-21_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+%pip install -q --progress-bar off --no-warn-conflicts langchain-docling langchain-core langchain-huggingface langchain_milvus langchain python-dotenv
+```
+
+----------------------------------------
+
+TITLE: Converting CSV Files to Docling Documents with Python
+DESCRIPTION: This code snippet demonstrates how to convert a CSV file to a Docling document using the DocumentConverter class. It imports the necessary modules, creates a converter instance, processes a CSV file, and exports the result to markdown format.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/backend_csv.ipynb#2025-04-21_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+from pathlib import Path
+
+from docling.document_converter import DocumentConverter
+
+# Convert CSV to Docling document
+converter = DocumentConverter()
+result = converter.convert(Path("../../tests/data/csv/csv-comma.csv"))
+output = result.document.export_to_markdown()
+```
+
+----------------------------------------
+
+TITLE: Creating Weaviate Collection (Python)
+DESCRIPTION: Imports necessary Weaviate configuration classes. It defines the collection name ("docling"). It checks if the collection already exists and deletes it if it does. Then, it creates the collection with a text2vec-openai vectorizer (using "text-embedding-3-large"), an OpenAI generative module (using "gpt-4o"), and defines two properties: "text" (TEXT type) and "title" (TEXT type, skipped for vectorization). Requires the `weaviate` library and a connected `client`.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_weaviate.ipynb#_snippet_8
+
+LANGUAGE: python
+CODE:
+```
+import weaviate.classes.config as wc
+
+# Define the collection name
+collection_name = "docling"
+
+# Delete the collection if it already exists
+if client.collections.exists(collection_name):
+    client.collections.delete(collection_name)
+
+# Create the collection
+collection = client.collections.create(
+    name=collection_name,
+    vectorizer_config=wc.Configure.Vectorizer.text2vec_openai(
+        model="text-embedding-3-large",  # Specify your embedding model here
+    ),
+    # Enable generative model from Cohere
+    generative_config=wc.Configure.Generative.openai(
+        model="gpt-4o"  # Specify your generative model for RAG here
+    ),
+    # Define properties of metadata
+    properties=[
+        wc.Property(name="text", data_type=wc.DataType.TEXT),
+        wc.Property(name="title", data_type=wc.DataType.TEXT, skip_vectorization=True),
+    ],
+)
+```
+
+----------------------------------------
+
+TITLE: Converting and Chunking Documents with Docling
+DESCRIPTION: Downloads an article from the web using Docling's DocumentConverter, then processes it with the HybridChunker to create appropriately sized text chunks. For each chunk, both the text content and metadata are extracted for vector storage.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/retrieval_qdrant.ipynb#2025-04-21_snippet_3
+
+LANGUAGE: python
+CODE:
+```
+result = doc_converter.convert(
+    "https://www.sagacify.com/news/a-guide-to-chunking-strategies-for-retrieval-augmented-generation-rag"
+)
+documents, metadatas = [], []
+for chunk in HybridChunker().chunk(result.document):
+    documents.append(chunk.text)
+    metadatas.append(chunk.meta.export_json_dict())
+```
+
+----------------------------------------
+
+TITLE: Converting Documents with Docling Python API
+DESCRIPTION: Basic example showing how to use Docling's DocumentConverter to convert a document from a URL or local path and export it to Markdown format.
+SOURCE: https://github.com/docling-project/docling/blob/main/README.md#2025-04-23_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+
+source = "https://arxiv.org/pdf/2408.09869"  # document per local path or URL
+converter = DocumentConverter()
+result = converter.convert(source)
+print(result.document.export_to_markdown())  # output: "## Docling Technical Report[...]"
+```
+
+----------------------------------------
+
+TITLE: Converting XML with Docling - Python
+DESCRIPTION: Demonstrates the basic usage of `DocumentConverter` to convert a supported XML file (PMC article) into a `DoclingDocument`. It initializes the converter, specifies the source file path, performs the conversion, and prints the conversion status. Requires the `docling` library.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/backend_xml_rag.ipynb#_snippet_0
+
+LANGUAGE: Python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+
+# a sample PMC article:
+source = "../../tests/data/jats/elife-56337.nxml"
+converter = DocumentConverter()
+result = converter.convert(source)
+print(result.status)
+```
+
+----------------------------------------
+
+TITLE: Creating Azure AI Search Index for Vector Search
+DESCRIPTION: Defines and creates an Azure AI Search index with vector search capabilities, including fields for chunk ID, content, and content vector.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_azuresearch.ipynb#2025-04-21_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    AzureOpenAIVectorizer,
+    AzureOpenAIVectorizerParameters,
+    HnswAlgorithmConfiguration,
+    SearchableField,
+    SearchField,
+    SearchFieldDataType,
+    SearchIndex,
+    SimpleField,
+    VectorSearch,
+    VectorSearchProfile,
+)
+from rich.console import Console
+
+console = Console()
+
+VECTOR_DIM = 1536  # Adjust based on your chosen embeddings model
+
+index_client = SearchIndexClient(
+    AZURE_SEARCH_ENDPOINT, AzureKeyCredential(AZURE_SEARCH_KEY)
+)
+
+
+def create_search_index(index_name: str):
+    # Define fields
+    fields = [
+        SimpleField(name="chunk_id", type=SearchFieldDataType.String, key=True),
+        SearchableField(name="content", type=SearchFieldDataType.String),
+        SearchField(
+            name="content_vector",
+            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+            searchable=True,
+            filterable=False,
+            sortable=False,
+            facetable=False,
+            vector_search_dimensions=VECTOR_DIM,
+            vector_search_profile_name="default",
+        ),
+    ]
+    # Vector search config with an AzureOpenAIVectorizer
+    vector_search = VectorSearch(
+        algorithms=[HnswAlgorithmConfiguration(name="default")],
+        profiles=[
+            VectorSearchProfile(
+                name="default",
+                algorithm_configuration_name="default",
+                vectorizer_name="default",
+            )
+        ],
+        vectorizers=[
+            AzureOpenAIVectorizer(
+                vectorizer_name="default",
+                parameters=AzureOpenAIVectorizerParameters(
+                    resource_url=AZURE_OPENAI_ENDPOINT,
+                    deployment_name=AZURE_OPENAI_EMBEDDINGS,
+                    model_name="text-embedding-3-small",
+                    api_key=AZURE_OPENAI_API_KEY,
+                ),
+            )
+        ],
+    )
+
+    # Create or update the index
+    new_index = SearchIndex(name=index_name, fields=fields, vector_search=vector_search)
+    try:
+        index_client.delete_index(index_name)
+    except Exception:
+        pass
+
+    index_client.create_or_update_index(new_index)
+    console.print(f"Index '{index_name}' created.")
+
+
+create_search_index(AZURE_SEARCH_INDEX_NAME)
+```
+
+----------------------------------------
+
+TITLE: Prefetching Docling Models via CLI
+DESCRIPTION: Provides the command to download Docling models explicitly using the `docling-tools` utility. This is useful for preparing models for offline use or in environments without internet access during runtime. The output indicates the models being downloaded and their destination.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/usage/index.md#_snippet_3
+
+LANGUAGE: sh
+CODE:
+```
+$ docling-tools models download
+Downloading layout model...
+Downloading tableformer model...
+Downloading picture classifier model...
+Downloading code formula model...
+Downloading easyocr models...
+Models downloaded into $HOME/.cache/docling/models.
+```
+
+----------------------------------------
+
+TITLE: Installing Tesseract OCR on macOS
+DESCRIPTION: Console commands for installing Tesseract OCR engine on macOS using Homebrew and setting the required TESSDATA_PREFIX environment variable.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/installation/index.md#2025-04-21_snippet_3
+
+LANGUAGE: bash
+CODE:
+```
+brew install tesseract leptonica pkg-config
+TESSDATA_PREFIX=/opt/homebrew/share/tessdata/
+echo "Set TESSDATA_PREFIX=${TESSDATA_PREFIX}"
+```
+
+----------------------------------------
+
+TITLE: Connecting to Weaviate Embedded (Python)
+DESCRIPTION: Imports the `weaviate` library. It establishes a connection to a Weaviate embedded instance using `weaviate.connect_to_embedded()`. It passes the fetched OpenAI API key in the headers for authentication with the text2vec-openai vectorizer. Requires the `weaviate` library and a valid `openai_api_key`.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/rag_weaviate.ipynb#_snippet_7
+
+LANGUAGE: python
+CODE:
+```
+import weaviate
+
+# Connect to Weaviate embedded
+client = weaviate.connect_to_embedded(headers={"X-OpenAI-Api-Key": openai_api_key})
+```
+
+----------------------------------------
+
+TITLE: Initialize Milvus and Index Documents - LlamaIndex Python
+DESCRIPTION: Configures a MilvusVectorStore connection, creates a VectorStoreIndex from documents loaded by the directory reader, applies the DoclingNodeParser for chunking, and stores the resulting nodes in the Milvus vector store. This step builds the searchable index.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/backend_xml_rag.ipynb#_snippet_14
+
+LANGUAGE: python
+CODE:
+```
+from llama_index.core import StorageContext, VectorStoreIndex
+from llama_index.vector_stores.milvus import MilvusVectorStore
+
+vector_store = MilvusVectorStore(
+    uri=MILVUS_URI,
+    dim=embed_dim,
+    overwrite=True,
+)
+
+index = VectorStoreIndex.from_documents(
+    documents=dir_reader.load_data(show_progress=True),
+    transformations=[node_parser],
+    storage_context=StorageContext.from_defaults(vector_store=vector_store),
+    embed_model=EMBED_MODEL,
+    show_progress=True,
+)
+```
+
+----------------------------------------
+
+TITLE: Using Prefetched Models via Environment Variable
+DESCRIPTION: Demonstrates how to use the `DOCLING_ARTIFACTS_PATH` environment variable to point Docling to the local directory containing prefetched models. Setting this variable allows both Python scripts and the CLI to automatically use the specified models without requiring explicit path arguments.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/usage/index.md#_snippet_6
+
+LANGUAGE: sh
+CODE:
+```
+export DOCLING_ARTIFACTS_PATH="/local/path/to/models"
+python my_docling_script.py
+```
+
+----------------------------------------
+
+TITLE: Configuring Hugging Face Tokenizer (Docling/Python)
+DESCRIPTION: Imports necessary classes for Hugging Face tokenization. It defines the embedding model ID and a maximum token limit. It then creates a `HuggingFaceTokenizer` instance using an `AutoTokenizer` loaded from the specified model ID and sets the maximum token limit.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/hybrid_chunking.ipynb#_snippet_5
+
+LANGUAGE: python
+CODE:
+```
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
+from transformers import AutoTokenizer
+
+from docling.chunking import HybridChunker
+
+EMBED_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+MAX_TOKENS = 64  # set to a small number for illustrative purposes
+
+tokenizer = HuggingFaceTokenizer(
+    tokenizer=AutoTokenizer.from_pretrained(EMBED_MODEL_ID),
+    max_tokens=MAX_TOKENS  # optional, by default derived from `tokenizer` for HF case
+)
+```
+
+----------------------------------------
+
+TITLE: Configuring Docling v2 DocumentConverter (Python)
+DESCRIPTION: Demonstrates how to initialize the `DocumentConverter` in Docling v2 with custom settings. It shows how to define a whitelist of allowed input formats and configure format-specific options, such as pipeline settings and backend choices for PDF and DOCX formats.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/v2.md#_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+    WordFormatOption,
+)
+from docling.pipeline.simple_pipeline import SimplePipeline
+from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+
+## Default initialization still works as before:
+# doc_converter = DocumentConverter()
+
+
+# previous `PipelineOptions` is now `PdfPipelineOptions`
+pipeline_options = PdfPipelineOptions()
+pipeline_options.do_ocr = False
+pipeline_options.do_table_structure = True
+#...
+
+## Custom options are now defined per format.
+doc_converter = (
+    DocumentConverter(  # all of the below is optional, has internal defaults.
+        allowed_formats=[
+            InputFormat.PDF,
+            InputFormat.IMAGE,
+            InputFormat.DOCX,
+            InputFormat.HTML,
+            InputFormat.PPTX,
+        ],  # whitelist formats, non-matching files are ignored.
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_options=pipeline_options, # pipeline options go here.
+                backend=PyPdfiumDocumentBackend # optional: pick an alternative backend
+            ),
+            InputFormat.DOCX: WordFormatOption(
+                pipeline_cls=SimplePipeline # default for office formats and HTML
+            ),
+        },
+    )
+)
+
+```
+
+----------------------------------------
+
+TITLE: Installing Docling on macOS Intel
+DESCRIPTION: Commands for installing Docling on Intel-based Macs with compatible PyTorch versions using different package managers (uv, pip, and Poetry).
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/installation/index.md#2025-04-21_snippet_8
+
+LANGUAGE: bash
+CODE:
+```
+# For uv users
+uv add torch==2.2.2 torchvision==0.17.2 docling
+
+# For pip users
+pip install "docling[mac_intel]"
+
+# For Poetry users
+poetry add docling
+```
+
+----------------------------------------
+
+TITLE: Installing Dependencies (Python)
+DESCRIPTION: Installs the required Python packages `pip`, `docling`, and `transformers` using pip. This is a prerequisite for running the subsequent code examples.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/hybrid_chunking.ipynb#_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+%pip install -qU pip docling transformers
+```
+
+----------------------------------------
+
+TITLE: Query Index with RAG and Filters - LlamaIndex Python
+DESCRIPTION: Creates a query engine from the index, specifying the language model and applying metadata filters to restrict the search to a specific document filename, then executes a query and prints the RAG-augmented response. This shows how RAG uses indexed context to answer questions.
+SOURCE: https://github.com/docling-project/docling/blob/main/docs/examples/backend_xml_rag.ipynb#_snippet_18
+
+LANGUAGE: python
+CODE:
+```
+from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
+
+filters = MetadataFilters(
+    filters=[
+        ExactMatchFilter(key="filename", value="nihpp-2024.12.26.630351v1.nxml"),
+    ]
+)
+
+query_engine = index.as_query_engine(llm=GEN_MODEL, filter=filters, similarity_top_k=3)
+result = query_engine.query(query)
+
+console.print(
+    Panel(
+        result.response.strip(),
+        title="Generated Content with RAG",
+        border_style="bold green",
+    )
+)
+```

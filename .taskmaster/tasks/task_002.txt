@@ -1,6 +1,6 @@
 # Task ID: 2
 # Title: Implement PDF Structure Extraction with Docling
-# Status: pending
+# Status: in-progress
 # Dependencies: 1
 # Priority: high
 # Description: Create the core PDF parsing module using Docling's DocumentConverter to extract text, images, tables and bounding boxes

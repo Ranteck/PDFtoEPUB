@@ -8,7 +8,7 @@ import openai
 import os # Added os module for environment variables
 from docling.document_converter import DocumentConverter, PdfFormatOption # Added for PDF parsing
 from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling_core.types.doc import PictureItem # For image extraction
+from docling_core.types.doc import DoclingDocument, PictureItem  # For image extraction
 from PIL import Image # For saving images; docling might already provide PIL Images
 
 def create_epub_directories():
@@ -26,17 +26,17 @@ def create_epub_directories():
     return base_dir
 
 # Placeholder for PDF parsing functions
-def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DocumentConverter | None, dict]:
+def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DoclingDocument | None, dict]:
     """
     Parses the PDF file using DocumentConverter, saves its structure as layout.json,
-    and returns the doc object and layout data.
+    and returns the resulting DoclingDocument along with the layout data.
 
     Args:
         pdf_path: Path to the input PDF file.
         work_dir: Directory to save the layout.json file.
 
     Returns:
-        A tuple containing the docling document object and a dictionary of the PDF layout structure.
+        A tuple containing the DoclingDocument instance and a dictionary of the PDF layout structure.
         Returns (None, {}) on failure.
     """
     try:
@@ -83,18 +83,18 @@ def parse_pdf_to_layout_json(pdf_path: Path, work_dir: Path) -> tuple[DocumentCo
         print(f"Error parsing PDF: {e}")
         return None, {}
 
-# The 'doc_object' parameter below should be the DoclingDocument model
+# The parameter below expects a ``DoclingDocument`` instance
 def extract_and_save_images(docling_document, layout_data: dict, images_output_dir: Path) -> dict:
     """
-    Extracts images referenced in layout_data from the doc_object and saves them.
+    Extracts images referenced in ``layout_data`` from the provided ``DoclingDocument`` and saves them.
 
     Args:
-        doc_object: The document object returned by DocumentConverter.convert().
-        layout_data: The dictionary from doc_object.export_structure().
-        images_output_dir: The directory (OEBPS/Images) to save extracted images.
+        docling_document: The ``DoclingDocument`` instance returned by ``parse_pdf_to_layout_json``.
+        layout_data: The dictionary generated from ``docling_document.export_to_sexp()``.
+        images_output_dir: The directory (``OEBPS/Images``) where extracted images will be saved.
 
     Returns:
-        A dictionary mapping image reference names to their relative paths in the EPUB.
+        A dictionary mapping image reference names to their relative paths inside the EPUB.
     """
     image_references = {}
     # Parameter renamed to docling_document for clarity
@@ -146,13 +146,13 @@ def extract_and_save_images(docling_document, layout_data: dict, images_output_d
                         else:
                             print(f"Warning: Could not retrieve PIL image for {img_ref} from PictureItem.")
                     except AttributeError as ae:
-                        print(f"AttributeError extracting image for {img_ref}: {ae}. PictureItem methods might be missing or doc_object is not as expected.")
+                        print(f"AttributeError extracting image for {img_ref}: {ae}. PictureItem methods might be missing or docling_document is not as expected.")
                     except Exception as e:
                         print(f"Error processing image {img_ref}: {e}")
                 else:
-                    # This case means layout.json references an image that isn't in doc_object.pictures
+                    # This case means layout.json references an image that isn't in docling_document.pictures
                     # or the ref format doesn't match.
-                    print(f"Warning: Image reference '{img_ref}' from layout_data not found in doc_object.pictures via self_ref.")
+                    print(f"Warning: Image reference '{img_ref}' from layout_data not found in docling_document.pictures via self_ref.")
                     # Placeholder for trying to get image via PyMuPDF if docling fails or ref is different
                     # For now, just note it's missing.
                     # image_bytes = get_image_with_pymupdf(pdf_path, img_ref_details_from_layout)

@@ -387,8 +387,8 @@ def create_epub_file(
     language: str,
     identifier: str,
     xhtml_file_paths: list[Path], # Absolute paths to XHTML files in work_dir
-    image_oebps_paths: list[str], # Paths relative to OEBPS (e.g., "Images/pic1.png")
-    css_oebps_path: str,          # Path relative to OEBPS (e.g., "Styles/style.css")
+    image_paths_within_oebps: list[str], # Paths relative to OEBPS (e.g., "Images/pic1.png")
+    css_path_within_oebps: str,          # Path relative to OEBPS (e.g., "Styles/style.css")
     work_dir: Path
 ) -> None:
     """
@@ -404,11 +404,11 @@ def create_epub_file(
     # Add CSS item
     # css_path_within_oebps is like "Styles/style.css"
     # Full path to read content: work_dir / "OEBPS" / css_path_within_oebps
-    css_full_path = work_dir / "OEBPS" / css_oebps_path
+    css_full_path = work_dir / "OEBPS" / css_path_within_oebps
     if css_full_path.exists():
         css_item = epub.EpubItem(
             uid="style_sheet",
-            file_name=css_oebps_path, # Path within EPUB (relative to OEBPS)
+            file_name=css_path_within_oebps, # Path within EPUB (relative to OEBPS)
             media_type="text/css",
             content=css_full_path.read_bytes()
         )
@@ -433,16 +433,16 @@ def create_epub_file(
 
         if css_item: # Only add link if CSS item was successfully created
             # Relative path from Text/page.xhtml to Styles/style.css is ../Styles/style.css
-            # css_oebps_path is "Styles/style.css"
-            # So, Link href should be "../" + css_oebps_path
-            item.add_link(epub.Link(href=f"../{css_oebps_path}", rel="stylesheet", type="text/css"))
+            # css_path_within_oebps is "Styles/style.css"
+            # So, Link href should be "../" + css_path_within_oebps
+            item.add_link(epub.Link(href=f"../{css_path_within_oebps}", rel="stylesheet", type="text/css"))
 
         book.add_item(item)
         epub_xhtml_items.append(item)
 
     # Add Image items
-    # image_oebps_paths contains paths like "Images/pic1.png"
-    for img_oebps_path_str in image_oebps_paths:
+    # image_paths_within_oebps contains paths like "Images/pic1.png"
+    for img_oebps_path_str in image_paths_within_oebps:
         img_full_path = work_dir / "OEBPS" / img_oebps_path_str
         if img_full_path.exists():
             media_type = get_image_media_type(img_oebps_path_str)
